@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "provisori",
+    "slug": "provisori",
+    "version": "131.0.0",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.gamequestion",
+      "permissions": [
+        "com.android.vending.BILLING"
+      ],
+      "versionCode": 133,
+      "useNextNotificationsApi": true,
+      "useNextCameraApi": true,
+      "minSdkVersion": "22",
+      "targetSdkVersion": "31"
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gamequestion"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "69171a9e-3f67-4470-bf64-d30061080b2b"
+      }
+    },
+    "owner": "framoran",
+    "plugins": [
+      "react-native-iap"
+    ]
+  }
+}
