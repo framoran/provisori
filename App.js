@@ -82,26 +82,26 @@ export default function App() {
   const navigationRef = useRef();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [expoPushToken, setExpoPushToken] = useState('');
- const [notification, setNotification] = useState(false);
- const notificationListener = useRef();
- const responseListener = useRef();
+  const [notification, setNotification] = useState(false);
+  const notificationListener = useRef();
+  const responseListener = useRef();
 
- useEffect(() => {
-   registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
 
-   notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-     setNotification(notification);
-   });
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      setNotification(notification);
+    });
 
-   responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-     console.log(response);
-   });
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log(response);
+    });
 
-   return () => {
-     Notifications.removeNotificationSubscription(notificationListener.current);
-     Notifications.removeNotificationSubscription(responseListener.current);
-   };
- }, []);
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
 
   /*AsyncStorage.setItem('Name', '')
   AsyncStorage.setItem('email', '')
@@ -112,7 +112,7 @@ export default function App() {
     });*/
 
   // THIS SHOULD BE REPLACED WITH SECRET CODE FOR PRODUCTION
-  const secretCode = 'BQlye3wxvPXytmd6oQyh5FMzZj1dGJfunXmIExR17kLbLHKdhptbNe76exdCo87S4dknRcOpCjRYMS11zOB1wZ0gNiFSS98sGwmUY4jWHk30dMA6xolhBdgy3AX6B9j6VD24OyIPWkk4BVRa3FOJvFnViYUtGCE4zqK9Id9ahLtUqb5rWeqD2LwNVK39CO2JbzYiTYPKjUVhjV7YL6oPXiuFHKXUYvkkBNbVLT9YMR5wWwhDWeOgeYt11jkGuGU1';
+  const secretCode = '';
   AsyncStorage.setItem('secret', secretCode);
 
   const checkLogin = async () => {

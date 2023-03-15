@@ -2,7 +2,7 @@
   "expo": {
     "name": "provisori",
     "slug": "provisori",
-    "version": "131.0.0",
+    "version": "148.0.0",
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -12,11 +12,12 @@
       "permissions": [
         "com.android.vending.BILLING"
       ],
-      "versionCode": 133,
+      "versionCode": 148,
       "useNextNotificationsApi": true,
       "useNextCameraApi": true,
       "minSdkVersion": "22",
-      "targetSdkVersion": "31"
+      "targetSdkVersion": "31",
+      "googleServicesFile": "./google-services.json"
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,7 +35,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gamequestion"
+      "bundleIdentifier": "com.gamequestion",
+      "pushNotification": {
+        "usesPlist": "expo-notifications"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,6 +51,10 @@
     "owner": "framoran",
     "plugins": [
       "react-native-iap"
-    ]
+    ],
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#46b1c8"
+    }
   }
 }

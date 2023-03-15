@@ -219,11 +219,6 @@ const EnigmaView = () => {
 
     await iapManager.buyProduct()
 
-      // as a security -> send a secret api code to server that will respond only if the api code is valid
-      // store the api code in config => one way to store the API key as an environment variable is to use a library like react-native-config
-      // set indice on server
-      // fetchData();
-
     await iapManager.consumeProduct();
 
   };
@@ -311,8 +306,9 @@ const EnigmaView = () => {
                       <Text style={styles.hintButtonText}>Indice ?</Text>
                     </TouchableOpacity>
                   )}
-                  <Text style={[styles.indiceText, { marginTop: 0, fontStyle: 'italic', display: hintVisible ? 'flex' : 'none' }]}>{getHintElement} {getHint}</Text>
-
+                  <View style={styles.enigmaContainer}>
+                    <Text style={[styles.indiceText, { marginTop: 0, fontStyle: 'italic', display: hintVisible ? 'flex' : 'none' }]}>{getHintElement} {getHint}</Text>
+                  </View>
                   {showResponse && renderResponse()}
                   <Animated.View style={{ transform: [{ translateX: animatedValue }] }}>
                     <Text style={[styles.errorMessage, {marginTop: 15, fontStyle: 'italic'}]}>{getMessage} {response}</Text>

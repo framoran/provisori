@@ -3,8 +3,7 @@ import axios from 'axios';
 import StorageManager from './storage-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const APIKEY = 'd1963215-06c0-48e8-8541-d4f28e0c404d';
-const webservicesURL = 'https://provisori.com/api/';
+const webservicesURL = 'https://website.com/api/';
 
 async function register(email, password, name, firstname) {
   const json = JSON.stringify({
