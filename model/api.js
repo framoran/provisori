@@ -3,7 +3,8 @@ import axios from 'axios';
 import StorageManager from './storage-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const webservicesURL = 'https://website.com/api/';
+// const webservicesURL = 'https://website.com/api/';
+const webservicesURL = 'https://provisori.com/api/';
 
 async function register(email, password, name, firstname) {
   const json = JSON.stringify({
@@ -35,21 +36,23 @@ async function login(email, password) {
   }
 }
 
-async function setHint(email) {
+async function setHint() {
   const currentDate = new Date();
+  console.log(currentDate)
   const day = currentDate.getDate().toString().padStart(2, '0'); // get the day as a 2-digit string with leading zeros
   const month = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // get the month as a 2-digit string with leading zeros
   const year = currentDate.getFullYear().toString(); // get the year as a 4-digit string
   const formattedDate = `${day}_${month}_${year}`; // combine the day, month, and year with underscores
-
+  const email = await AsyncStorage.getItem('email');
   const secretCode = await AsyncStorage.getItem('secret');
-  const code = secretCode + formattedDate; // concatenate the secret code with the formatted date
+  const code = secretCode; // concatenate the secret code with the formatted date
 
   const json = JSON.stringify({
     email,
-    secretCode
+    code
   });
-  return postJSON(webservicesURL+'/hint', json);
+  console.log('data = ', json)
+  return postJSON(webservicesURL+'hint', json);
 }
 
 async function game(email) {
@@ -72,7 +75,7 @@ async function game(email) {
 
     return responseJson;
   } catch (error) {
-    console.error(error);
+    console.error("Err ",error?.response?.data);
     throw error;
   }
 }
@@ -134,4 +137,5 @@ export default {
   getEmail,
   game,
   checkResponse,
+  setHint,
 };

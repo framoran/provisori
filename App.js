@@ -12,19 +12,23 @@ import RankingScreen from './screens/Ranking';
 import ConditionsScreen from './screens/Conditions';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'react-native';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+// import {requestUserPermission, notificationListener }
+import { requestUserPermission, notificationListener, notificationPopupRef } from './utils/pushNotification';
+import NotificationPopup from 'react-native-push-notification-popup';
+import { View, Text, Button } from 'react-native';
+// import * as Device from 'expo-device';
+// import * as Notifications from 'expo-notifications';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowAlert: true,
+//     shouldPlaySound: false,
+//     shouldSetBadge: false,
+//   }),
+// });
 
 // Can use this function below OR use Expo's Push Notification Tool from: https://expo.dev/notifications
 async function sendPushNotification(expoPushToken) {
@@ -48,34 +52,7 @@ async function sendPushNotification(expoPushToken) {
 }
 
 async function registerForPushNotificationsAsync() {
-  let token;
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!');
-      return;
-    }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    alert(token);
-  } else {
-    alert('Must use physical device for Push Notifications');
-  }
 
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
-
-  return token;
 }
 
 export default function App() {
@@ -83,33 +60,39 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [expoPushToken, setExpoPushToken] = useState('');
   const [notification, setNotification] = useState(false);
-  const notificationListener = useRef();
+  // const notificationListener = useRef();
   const responseListener = useRef();
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
+    let FCMToken = getPermission()
+    notificationListener();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      setNotification(notification);
-    });
-
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(response);
-    });
-
-    return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
-    };
   }, []);
 
-  /*AsyncStorage.setItem('Name', '')
-  AsyncStorage.setItem('email', '')
-    .then((name) => {
-    })
-    .catch((error) => {
-      console.error(error);
-    });*/
+  const getPermission = async () => {
+    return await requestUserPermission();
+  }
+
+
+
+  const renderCustomPopup = ({ appIconSource, appTitle, timeText, title, body }) => (
+    <View style={{
+      backgroundColor: 'white',  // TEMP
+      borderRadius: 12,
+      minHeight: 86,
+      elevation: 2,
+      shadowColor: '#000000',
+      shadowOpacity: 0.5,
+      shadowRadius: 3,
+      shadowOffset: {
+        height: 1,
+        width: 0,
+      }
+    }}>
+      <Text style={{fontSize:15, marginHorizontal:10, marginTop:5}}>{title}</Text>
+      <Text style={{fontSize:12, marginHorizontal:10, marginTop:5}}>{body}</Text>
+    </View>
+  );
 
   // THIS SHOULD BE REPLACED WITH SECRET CODE FOR PRODUCTION
   const secretCode = '';
@@ -280,6 +263,12 @@ export default function App() {
           ) : null}
         </Drawer.Navigator>
       </NavigationContainer>
+      <NotificationPopup
+        ref={notificationPopupRef}
+        renderPopupContent={renderCustomPopup}
+        shouldChildHandleResponderStart={true}
+        shouldChildHandleResponderMove={true}
+      />
     </>
   );
 }

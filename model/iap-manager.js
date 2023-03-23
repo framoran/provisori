@@ -1,70 +1,100 @@
 import { Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
-import * as InAppPurchases from 'expo-in-app-purchases';
+// import * as InAppPurchases from 'expo-in-app-purchases';
+import * as InAppPurchases from 'react-native-iap';
+import {finishTransaction, flushFailedPurchasesCachedAsPendingAndroid, consumePurchase, getPurchaseHistory, getAvailablePurchases} from 'react-native-iap';
 
 // Set the product IDs for your in-app purchases
 const items = Platform.select({
-  ios: ['ch.provisori.clue'],
-  android: ['ch.provisori.clue']
+  ios: ['ch.provisori.indice'],
+  android: ['ch.provisori.indice']
 });
 
 async function connectAsync() {
-  await InAppPurchases.connectAsync();
+//   await InAppPurchases.initConnection();
+if (Platform.OS === 'android') {
+    InAppPurchases.initConnection()
+      .then(result => {
+        console.log('Connected to Google Play');
+      })
+      .catch(error => {
+        console.log('Failed to connect to Google Play', error);
+      });
+  } else if (Platform.OS === 'ios') {
+    InAppPurchases.initConnection()
+      .then(result => {
+        console.log('Connected to App Store');
+      })
+      .catch(error => {
+        console.log('Failed to connect to App Store', error);
+      });
+  }
 }
 
 async function getProducts() {
-  const { responseCode, results } = await InAppPurchases.getProductsAsync(items);
-  if (responseCode === InAppPurchases.IAPResponseCode.OK) {
-    return results;
-  } else {
-    throw new Error('Failed to get products');
-  }
+    try {
+        const products = await InAppPurchases.getProducts({skus:['ch.provisori.indice']});
+        console.log(products);
+        return products
+      } catch (error) {
+        console.log('Failed to get products', error);
+        return error
+      }
+
 }
 
 async function buyProduct() {
   await connectAsync();
   const products = await getProducts();
-  if (products.length > 0) {
-    const purchase = await InAppPurchases.purchaseItemAsync(products[0].productId);
-    if (purchase) {
-      const message = `Purchase successful: ${JSON.stringify(purchase)}`;
-      Alert.alert('Success', message);
-      return true;
-    }
+  console.log("products  ",products);
+  //const isConsumable = true; // or false, depending on your use case
+  // Assuming you have a string representing the developer payload for Android
+  //const developerPayloadAndroid = "Achat d'indice Provisori";
+  try {
+    const purchase = await InAppPurchases.requestPurchase({skus: ["ch.provisori.indice"]});
+    //  const finishTransaction = await finishTransaction({purchase, isConsumable, developerPayloadAndroid});
+    console.log("OKOK", purchase);
+    // { productId: 'product_id_1', transactionId: 'transaction_id_1', purchaseToken: 'purchase_token_1' }
+  } catch (error) {
+    console.log('Failed to purchase product', error);
   }
+
   const message = 'Purchase failed';
   Alert.alert('Error', message);
   return false;
 }
 
-async function consumeProduct() {
+async function consumeProducts() {
   await connectAsync();
-  const { responseCode, results } = await InAppPurchases.getPurchaseHistoryAsync();
-  if (responseCode === InAppPurchases.IAPResponseCode.OK) {
-    for (const purchase of results) {
-      const message = `Consumed product: ${purchase.productId}`;
-      Alert.alert('Success', message);
-      await InAppPurchases.finishTransactionAsync(purchase, true);
-    }
-  } else {
-    const message = 'Failed to get purchase history';
-    Alert.alert('Error', message);
-    throw new Error(message);
-  }
-}
+  try {
+     const purchases = await getAvailablePurchases();
+     flushFailedPurchasesCachedAsPendingAndroid();
+     const isConsumable = true; // or false, depending on your use case
+     // Assuming you have a string representing the developer payload for Android
+     const developerPayloadAndroid = "Achat d'indice Provisori";
+     await Promise.all(purchases.map(async purchase => {
 
-// Mock implementation for Expo Go
-async function mockBuyProduct() {
-  console.warn('In-app purchases are not supported in Expo Go.');
-  return false;
-}
-async function mockConsumeProduct() {
-  console.warn('In-app purchases are not supported in Expo Go.');
+        await finishTransaction({purchase, isConsumable, developerPayloadAndroid});
+
+       }
+
+     ))
+
+     /*Alert.alert(
+      'Achat réussit',
+      `Vous avez acheté un indice !`,
+    );*/
+    
+  } catch (error) {
+    console.warn(error);
+    Alert.alert(error.message);
+  }
+
 }
 
 const IAP = {
-  buyProduct: Constants.appOwnership === 'expo' ? mockBuyProduct : buyProduct,
-  consumeProduct: Constants.appOwnership === 'expo' ? mockConsumeProduct : consumeProduct,
+buyProduct:  buyProduct,
+consumeProducts:  consumeProducts,
 };
 
 export default IAP;

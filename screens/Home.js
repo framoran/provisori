@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 // Import api.js from the model folder
 import api from '../model/api';
+import { Dimensions } from 'react-native';
 
 // Import iap-manager
 import iapManager from '../model/iap-manager';
@@ -23,7 +24,7 @@ const EnigmaView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [getHint, setHint] = useState('');
   const [getHintElement, setHintElement] = useState('');
-  const [response, setResponse] = useState('');
+  const [response, setResponse] = useState('...');
   const [name, setName] = useState('');
   const [enigme, setEnigme] = useState('');
   const [enigmeDisplay, setEnigmeDisplay] = useState('display_none');
@@ -37,12 +38,16 @@ const EnigmaView = () => {
   const [winnerUsername, setWinnerUsername] = useState(false);
   const [winnerPrice, setwinnerPrice] = useState(false);
   const [winnerPriceURL, setwinnerPriceURL] = useState(false);
+  const [price, setPrice] = useState('');
+  const [priceURL, setPriceURL] = useState('');
+  const windowHeight = Dimensions.get('window').height;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const email = await AsyncStorage.getItem('email');
         const name = await AsyncStorage.getItem('name');
+        setResponse('');
         if (email !== null) {
         }
         if (name !== null) {
@@ -89,10 +94,6 @@ const EnigmaView = () => {
           );
         }
 
-        if (gameData.response) {
-          setResponse(gameData.response);
-        }
-
         if (gameData.question) {
           setEnigme(gameData.question);
         }
@@ -105,10 +106,23 @@ const EnigmaView = () => {
           setResponse(gameData.response);
         }
 
+        if (gameData.price) {
+          setPrice(gameData.price);
+        }
+
+        if (gameData.price_url) {
+          setPriceURL(gameData.price_url);
+        }
+
         if (gameData.status == 'show_response'){
           setMessage("Réponse à l'énigme du jour = " +response)
           console.log('ENIGMEEEEEE')
         }
+        // init hint
+        setHintPurchased(false)
+        setHintElement('');
+        setHintVisible(false);
+        setHint('');
 
         if (gameData.hint) {
           setHintPurchased(true);
@@ -116,6 +130,7 @@ const EnigmaView = () => {
           setHintElement('L\'indice du jour = ')
           setHintVisible(true);
         }
+
         if (gameData.points) {
           setPoints(gameData.points);
         }
@@ -124,11 +139,11 @@ const EnigmaView = () => {
       }
     };
 
+    fetchData();
+
     const intervalId = setInterval(() => {
       setRefresh(refresh => !refresh); // toggle the refresh state to trigger a re-render
     }, 60000);
-
-    fetchData();
 
     return () => {
       clearInterval(intervalId);
@@ -136,7 +151,7 @@ const EnigmaView = () => {
   }, [refresh]); // add refresh to the dependency array
 
   const checkAnswer = async () => {
-    setMessage('Loading ...');
+    setMessage('');
     setIsLoading(true);
 
     // Vérifie la réponse de l'utilisateur ici
@@ -168,10 +183,11 @@ const EnigmaView = () => {
             { cancelable: false },
           );
       }else {
+        setResponse('...');
         // anime le texte et affiche la réponse
         Animated.sequence([
-          Animated.timing(animatedValue, { toValue: 200, duration: 500, useNativeDriver: true }),
-          Animated.timing(animatedValue, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(animatedValue, { toValue: 100, duration: 500, useNativeDriver: true }),
+          Animated.timing(animatedValue, { toValue: -100, duration: 500, useNativeDriver: true }),
           Animated.timing(animatedValue, { toValue: 100, duration: 500, useNativeDriver: true }),
           Animated.timing(animatedValue, { toValue: 0, duration: 500, useNativeDriver: true })
         ]).start(() => {
@@ -181,6 +197,7 @@ const EnigmaView = () => {
             setMessage(getRandomErrorMessage)
           }
           setIsLoading(false);
+          setResponse('');
         });
       }
     } else {
@@ -216,26 +233,12 @@ const EnigmaView = () => {
 
   const purchaseHint = async () => {
     console.log('init')
+    await iapManager.buyProduct();
+    await iapManager.consumeProducts();
 
-    await iapManager.buyProduct()
+    await api.setHint();
+    setRefresh(refresh => !refresh); // toggle the refresh state to trigger a re-render
 
-    await iapManager.consumeProduct();
-
-  };
-
-  const renderResponse = () => {
-    return (
-      <View style={styles.responseContainer}>
-        <Text style={styles.responseText}>Félicitations ! Vous avez trouvé la réponse.</Text>
-        <ConfettiCannon
-          count={200}
-          origin={{ x: -1000, y: -2000 }}
-          explosionSpeed={500}
-          fallSpeed={2000}
-          fadeOut={true}
-        />
-      </View>
-    );
   };
 
   return (
@@ -254,7 +257,9 @@ const EnigmaView = () => {
                 ) : (
                   <>
                     {enigmeDisplay === 'has_found' && (
-                      <Text style={styles.boxTextHasFound}> Vous avez trouvé la réponse ! </Text>
+                      <>
+                        <Text style={styles.boxTextHasFound}> Vous avez trouvé la réponse ! </Text>
+                      </>
                     )}
                     {enigmeDisplay === 'show_response' && (
                       <Text style={styles.boxText}> La réponse à l'énigme </Text>
@@ -309,9 +314,9 @@ const EnigmaView = () => {
                   <View style={styles.enigmaContainer}>
                     <Text style={[styles.indiceText, { marginTop: 0, fontStyle: 'italic', display: hintVisible ? 'flex' : 'none' }]}>{getHintElement} {getHint}</Text>
                   </View>
-                  {showResponse && renderResponse()}
+                  {showResponse}
                   <Animated.View style={{ transform: [{ translateX: animatedValue }] }}>
-                    <Text style={[styles.errorMessage, {marginTop: 15, fontStyle: 'italic'}]}>{getMessage} {response}</Text>
+                    <Text style={[styles.errorMessage, {marginTop: 0, fontStyle: 'italic'}]}>{getMessage} {response}</Text>
                   </Animated.View>
                 </>
               ) : (
@@ -324,17 +329,25 @@ const EnigmaView = () => {
 
         </View>
 
-        <Text style={styles.title_nm}>
-          <FontAwesome name="trophy" size={24} color="black" /> Prix
+        <Text style={styles.priceButton}>
+         <AntDesign name="star" size={24} color="gold" />
+         <AntDesign name="star" size={24} color="gold" />
+         <AntDesign name="star" size={24} color="gold" />
+         <Text style={styles.priceText}>   Prix   </Text>
+         <AntDesign name="star" size={24} color="gold" />
+         <AntDesign name="star" size={24} color="gold" />
+         <AntDesign name="star" size={24} color="gold" />
         </Text>
 
-        <TouchableOpacity style={styles.hintButton} onPress={purchaseHint}>
-          <AntDesign name="questioncircle" size={24} color="#fff" />
-          <Text style={styles.hintButtonText}>Indice ?</Text>
-        </TouchableOpacity>
+        {price !== '' && priceURL !== '' ? (
+          <>
+            <Image source={{ uri: priceURL }} style={styles.image} />
+            <Text style={styles.text}>Vous jouez pour une {price}</Text>
+          </>
+        ) : (
+          <Text style={styles.text_bottom}>Aucun prix disponible pour le moment !</Text>
+        )}
 
-        <Image source={require('./europapark.jpg')} style={styles.image} />
-        <Text style={styles.text}>Vous jouez pour une entrée à Europapark</Text>
       </View>
     </ScrollView>
 
@@ -342,6 +355,7 @@ const EnigmaView = () => {
 };
 
 const styles = StyleSheet.create({
+
   box: {
     backgroundColor: '#873e58',
     flexDirection: 'row',
@@ -366,7 +380,12 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   boxTextHasFound: {
-    color: '#fff'
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginLeft: 0,
+    textAlign: 'center',
+    width: '100%'
   },
   checkAnswerButton: {
     color: '#fff',
@@ -428,6 +447,16 @@ const styles = StyleSheet.create({
     paddingRight: 0,
     paddingLeft: 0,
     margin: 0
+  },
+  text_bottom: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginTop: 10,
+    textAlign: 'left',
+    alignSelf: 'flex-start', // add this line
+    width: '100%', // add this line
+    marginBottom: 200
   },
   enigmaContainer: {
     flexDirection: 'row',
@@ -520,10 +549,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   responseText: {
-    fontSize: 20,
+    fontSize: 17,
     marginTop: 10,
     fontWeight: 'bold',
-    color: 'green',
+    color: '#873e58',
     marginBottom: 10,
     alignSelf: 'center',
   },
@@ -546,13 +575,28 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%', // add this line
   },
+  priceButton:{
+    width: '100%',
+    marginTop: 20,
+    backgroundColor: '#46b1c8',
+    borderRadius: 5,
+    padding: 10,
+    paddingLeft: 20,
+    paddingRight: 20,
+    textAlign: 'center',
+  },
+  priceText:{
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   errorMessage: {
     fontSize: 17,
     marginTop: 20,
     fontWeight: 'bold',
     color: '#873e58',
     marginBottom: 0,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   text_points_ml:{
     marginLeft: 10
