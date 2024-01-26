@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 
 // Import api.js from the model folder
 import api from '../model/api';
+
+// Import translations
+import strings_de from '../utils/strings-de';
+import strings_fr from '../utils/strings-fr';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -12,6 +17,7 @@ export default function LoginScreen({ navigation }) {
   const [errorMessage, setErrorMessage] = useState('');
   const isFocused = useIsFocused();
   const [buttonOpacity, setButtonOpacity] = useState(0);
+  const [strings, setStrings] = useState(false);
 
   const handleLogin = async () => {
     console.log('Logging in with email', email, 'and password', password);
@@ -31,7 +37,25 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const checkLang = async () => {
+    try {
+      let lang = await AsyncStorage.getItem('lang');
+      let selectedStrings = lang === 'de' ? strings_de : strings_fr;
+      if (!selectedStrings) {
+        await AsyncStorage.setItem('lang', 'fr');
+        selectedStrings = strings_de;
+      }
+      setStrings(selectedStrings);
+    } catch (error) {
+      console.log(error); // Log the error for debugging purposes
+    }
+
+  };
+
   useEffect(() => {
+
+    checkLang();
+
     const checkLogin = async () => {
       try {
         const email = await api.getEmail();
@@ -54,29 +78,35 @@ export default function LoginScreen({ navigation }) {
   }, []);
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
     <View style={styles.container}>
-      <Text style={styles.title}>Se connecter</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Mot de passe"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      {errorMessage !== '' && <Text style={styles.error}>{errorMessage}</Text>}
-      <TouchableOpacity style={[styles.button, { opacity: buttonOpacity }]} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Se connecter</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Pas encore de compte ? S'enregister</Text>
-      </TouchableOpacity>
-    </View>
+        <Text style={styles.title}>{strings.login}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder={strings.password}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        {errorMessage !== '' && <Text style={styles.error}>{errorMessage}</Text>}
+        <TouchableOpacity style={[styles.button, { opacity: buttonOpacity }]} onPress={handleLogin}>
+          <Text style={styles.buttonText}>{strings.login}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.link}>{strings.login_link_register_text}</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+
   );
 }
 

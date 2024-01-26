@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Linking, ScrollView, View, Text, Image, TextInput, Button, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Alert, Linking, ScrollView, View, Text, Image, TextInput, Button, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Animated } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -7,17 +7,23 @@ import Spinner from 'react-native-spinkit';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
-// Import api.js from the model folder
-import api from '../model/api';
 import { Dimensions } from 'react-native';
+import LottieView from 'lottie-react-native';
+import { format, getDayOfYear } from 'date-fns';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 
 // Import iap-manager
 import iapManager from '../model/iap-manager';
+// Import api.js from the model folder
+import api from '../model/api';
 
-const EnigmaView = () => {
+// Import translations
+import strings_de from '../utils/strings-de';
+import strings_fr from '../utils/strings-fr';
+
+const EnigmaView = ({navigation}) => {
   const [answer, setAnswer] = useState('');
   const [hintPurchased, setHintPurchased] = useState('');
-  const [hintEmail, setEmail] = useState(false);
   const [showResponse, setShowResponse] = useState(false);
   const [getMessage, setMessage] = useState('');
   const [animatedValue, setAnimatedValue] = useState(new Animated.Value(0));
@@ -30,9 +36,8 @@ const EnigmaView = () => {
   const [enigmeDisplay, setEnigmeDisplay] = useState('display_none');
   const [points, setPoints] = useState('Loading ...');
   const [totPoints, setTotPoints] = useState('');
-  const [msg, setMsg] = useState('Connexion au serveur ...');
+  const [msg, setMsg] = useState('Loading ...');
   const [hintVisible, setHintVisible] = useState(false);
-  const navigation = useNavigation();
   const [refresh, setRefresh] = useState(false);
   const [winnerPopup, setWinnerPopup] = useState(false);
   const [winnerUsername, setWinnerUsername] = useState(false);
@@ -40,16 +45,35 @@ const EnigmaView = () => {
   const [winnerPriceURL, setwinnerPriceURL] = useState(false);
   const [price, setPrice] = useState('');
   const [priceURL, setPriceURL] = useState('');
+  const [eveningResponse, setEveningResponse] = useState('');
+  const [priceRedirectURL, setPriceRedirectURL] = useState('');
   const windowHeight = Dimensions.get('window').height;
+  const [emailHint, setEmailHint] = useState('');
+  const [strings, setStrings] = useState(false);
+  const [eveningPopupWinner, setEveningPopupWinner] = useState(false);
+  const [popupWinnerDisplayed, setPopupWinnerDisplayed] = useState(false);
+  const [popupDisplayDate, setPopupDisplayDate] = useState('0');
+  const [textWin, setWin] = useState('');
+  const [textWin2, setWin2] = useState('');
+  const [welcome, setWelcome] = useState('');
+
+  let today = '0';
+  let dayOfYear = '1';
+
+  const email = '';
 
   useEffect(() => {
+    // refresh screen when it is loaded
+    const unsubscribe = navigation.addListener('focus', async () => {
+      // Fetch data and update state here
+      setRefresh(!refresh); // Toggle refresh state to force component to re-render
+    });
+
     const fetchData = async () => {
       try {
         const email = await AsyncStorage.getItem('email');
+        setEmailHint(email)
         const name = await AsyncStorage.getItem('name');
-        setResponse('');
-        if (email !== null) {
-        }
         if (name !== null) {
           setName(name);
         }
@@ -63,18 +87,17 @@ const EnigmaView = () => {
           setEnigmeDisplay(gameData.status);
         }
 
-        console.log('status2 ' +enigmeDisplay)
+        console.log(gameData.status)
 
-        //setEnigmeDisplay('not_found')
+        // for current version of Provisori => popup that announce monthly winnner
         if (gameData.popup_winner) {
           const winnerPriceLink = `${gameData.winnerPriceUrl}`;
           Alert.alert(
-            'Le gagnant a été tiré au sort !\n',
-            `Le joueur ${gameData.winner_username} remporte `,
+            `${strings.winner} \n`,
+            `${gameData.winner_username} remporte `,
             [
               {
                 text: 'OK',
-                onPress: () => console.log('OK Pressed'),
               },
               {
                 text: gameData.winner_price,
@@ -98,12 +121,30 @@ const EnigmaView = () => {
           setEnigme(gameData.question);
         }
 
+        if (gameData.textWin) {
+          setWin(gameData.textWin);
+        }
+
+        if (gameData.textWin2) {
+          setWin2(gameData.textWin2);
+        }
+
         if (gameData.tot_points) {
           setTotPoints(gameData.tot_points);
         }
 
+        setResponse(''); // reset response
+
         if (gameData.response) {
           setResponse(gameData.response);
+        }
+
+        if (gameData.welcome) {
+          setWelcome(gameData.welcome);
+        }
+
+        if (gameData.evening_response) {
+          setEveningResponse(gameData.evening_response);
         }
 
         if (gameData.price) {
@@ -114,10 +155,16 @@ const EnigmaView = () => {
           setPriceURL(gameData.price_url);
         }
 
-        if (gameData.status == 'show_response'){
-          setMessage("Réponse à l'énigme du jour = " +response)
-          console.log('ENIGMEEEEEE')
+        if (gameData.price_redirect_url){
+          setPriceRedirectURL(gameData.price_redirect_url);
         }
+
+        if (gameData.winner_message){
+          setPopupWinnerDisplayed(gameData.winner_message)
+        }else{
+          setPopupWinnerDisplayed(false)
+        }
+
         // init hint
         setHintPurchased(false)
         setHintElement('');
@@ -127,7 +174,7 @@ const EnigmaView = () => {
         if (gameData.hint) {
           setHintPurchased(true);
           setHint(gameData.hint);
-          setHintElement('L\'indice du jour = ')
+          setHintElement(strings.clue + ' = ')
           setHintVisible(true);
         }
 
@@ -139,6 +186,8 @@ const EnigmaView = () => {
       }
     };
 
+    checkLang();
+
     fetchData();
 
     const intervalId = setInterval(() => {
@@ -148,7 +197,30 @@ const EnigmaView = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [refresh]); // add refresh to the dependency array
+
+    // Return a function to unsubscribe from the event listener
+    return unsubscribe;
+
+  }, [refresh, navigation]); // add refresh to the dependency array
+
+  const checkLang = async () => {
+    try {
+      let lang = await AsyncStorage.getItem('lang');
+      let selectedStrings = lang === 'de' ? strings_de : strings_fr;
+      if (!selectedStrings) {
+        await AsyncStorage.setItem('lang', 'fr');
+        selectedStrings = strings_de;
+      }
+      setStrings(selectedStrings);
+    } catch (error) {
+      console.log(error); // Log the error for debugging purposes
+    }
+
+  };
+
+  const handleRegisterNavigation = () => {
+    navigation.navigate('LoginScreen');
+  };
 
   const checkAnswer = async () => {
     setMessage('');
@@ -159,28 +231,27 @@ const EnigmaView = () => {
       const email2 = await AsyncStorage.getItem('email');
       const response = await api.checkResponse(answer, email2);
       if (response.status === 'success') {
+
+        setRefresh(refresh => !refresh); // toggle the refresh state to trigger a re-render
         setShowResponse(true);
         setIsLoading(false);
         setMessage('');
+
       } else if(response.status === 'not_loggued'){
 
           await AsyncStorage.setItem('name', '');
           await AsyncStorage.setItem('email', '');
           Alert.alert(
-            'Vous devez être connecté pour jouer au jeu',
-            '',
+            `${strings.playLoginFalse}`,
+            ``,
             [
               {
-                text: 'Annuler',
-                onPress: () => console.log('Annuler Pressed'),
+                text: 'Se connecter',
+                onPress: handleRegisterNavigation, // Call the navigation function here
                 style: 'cancel',
               },
-              {
-                text: 'Connectez-vous',
-                onPress: () => navigation.navigate('LoginScreen'),
-              },
             ],
-            { cancelable: false },
+            { cancelable: false }
           );
       }else {
         setResponse('...');
@@ -203,16 +274,16 @@ const EnigmaView = () => {
     } else {
       // affiche une boîte d'alerte
       Alert.alert(
-        'Vous devez être connecté pour jouer au jeu',
+        `${strings.playLoginFalse}`,
         '',
         [
           {
-            text: 'Annuler',
+            text: `${strings.cancel}`,
             onPress: () => console.log('Annuler Pressed'),
             style: 'cancel',
           },
           {
-            text: 'Connectez-vous',
+            text: `${strings.login}`,
             onPress: () => navigation.navigate('LoginScreen'),
           },
         ],
@@ -224,9 +295,10 @@ const EnigmaView = () => {
 
   const getRandomErrorMessage = () => {
     const messages = [
-      "T'es sérieux là",
-      "Essaie encore !",
-      "On sait que tu peux y arriver !"
+      `${strings.incorrectAnswer}`,
+      `${strings.incorrectAnswer2}`,
+      `${strings.incorrectAnswer3}`,
+      `${strings.incorrectAnswer4}`,
     ];
     return messages[Math.floor(Math.random() * messages.length)];
   };
@@ -236,120 +308,182 @@ const EnigmaView = () => {
     await iapManager.buyProduct();
     await iapManager.consumeProducts();
 
-    await api.setHint();
     setRefresh(refresh => !refresh); // toggle the refresh state to trigger a re-render
 
   };
 
+  const handleImagePress = () => {
+    // Redirect to a new screen when the image is clicked
+    // For example, using the navigation prop from React Navigation:
+    Linking.openURL(priceRedirectURL);
+  };
+
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        {enigmeDisplay !== 'not_loggued' ? (
-          <View>
-            <Text style={styles.text_points}>
-              <Ionicons name="ribbon" type="font-awesome" color="#873e58" size={24} />
-                <Text> Points {totPoints}</Text>
-            </Text>
-            <View style={styles.box}>
-              {enigmeDisplay !== 'display_none' ? (
-                enigmeDisplay === 'not_found' ? (
-                  <Text style={styles.boxText}> Vous jouez pour {points} points !</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+      >
+      <ScrollView>
+        <View style={styles.container}>
+          {enigmeDisplay !== 'not_loggued' ? (
+            <View>
+              <View style={styles.box}>
+                {enigmeDisplay !== 'display_none' ? (
+                  enigmeDisplay === 'not_found' ? (
+                    <>
+                      <Text style={styles.boxText}>
+                        {welcome} !
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      {enigmeDisplay === 'has_found' && (
+                        <>
+                          <Text style={styles.boxText}>
+                            <Ionicons
+                              name={'md-happy'}
+                              size={15}
+                              color={'gold'}
+                              style={{ width: 35, marginRight: 10 }}
+                            /> {strings.findAnswer} ! <Ionicons
+                              name={'md-happy'}
+                              size={15}
+                              color={'gold'}
+                              style={{ width: 35 }}
+                            />
+
+                          </Text>
+                        </>
+                      )}
+                      {enigmeDisplay === 'show_response' && (
+                        <Text style={styles.boxText}> {strings.enigmaAnswer} </Text>
+                      )}
+                    </>
+                  )
                 ) : (
+                  <Text style={styles.boxText}> {strings.enigmaNotPresent} </Text>
+                )}
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.title_right} onPress={() => navigation.navigate('LoginScreen')}>
+              <Text style={styles.title_right}>
+                <Ionicons name="person-outline" type="font-awesome" color="#000" size={24} />
+                {strings.login}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {enigmeDisplay === 'has_found' && (
+            <ConfettiCannon count={200} origin={{ x: -200, y: -200 }} fadeOut={true} />
+          )}
+          <View style={styles.paddingEnigme}>
+            <Text style={styles.title}>{strings.enigma}</Text>
+            {enigmeDisplay !== 'display_none' ? (
+              <>
+                <View style={styles.enigmaContainer}>
+                  <Text style={styles.enigmaText}>{enigme}</Text>
+                </View>
+                {enigmeDisplay !== 'has_found' && enigmeDisplay !== 'display_none' ? (
                   <>
-                    {enigmeDisplay === 'has_found' && (
+
+                  {enigmeDisplay !== 'show_response' && (
+                    <View style={styles.answerContainer}>
+                      <TextInput
+                        style={styles.answerInput}
+                        onChangeText={setAnswer}
+                        value={answer}
+                        placeholder={strings.response}
+                        placeholderTextColor="#000"
+                      />
+                      <TouchableOpacity style={styles.hintButton} onPress={checkAnswer}>
+                        <Text style={styles.checkAnswerButton}>
+                          <Ionicons name="send-outline" type="font-awesome" color="#fff" size={15} />
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    )}
+                    {!hintPurchased && enigmeDisplay && emailHint != null && (
+                      <TouchableOpacity style={styles.hintButton} onPress={purchaseHint}>
+                        <AntDesign name="questioncircle" size={24} color="#fff" />
+                        <Text style={styles.hintButtonText}>{strings.clue} ?</Text>
+                      </TouchableOpacity>
+                    )}
+                    <View style={styles.enigmaContainer}>
+                      <Text style={[styles.indiceText, { marginTop: 0, fontStyle: 'italic', display: hintVisible ? 'flex' : 'none' }]}>{strings.clue} = {getHint}</Text>
+                    </View>
+
+                    {showResponse}
+
+                    {enigmeDisplay !== 'show_response' ? (
+                      <Animated.View style={{ transform: [{ translateX: animatedValue }] }}>
+                        <Text style={[styles.errorMessage, {marginTop: 0, fontStyle: 'italic'}]}>{getMessage} {response}</Text>
+                      </Animated.View>
+                    ) : (
                       <>
-                        <Text style={styles.boxTextHasFound}> Vous avez trouvé la réponse ! </Text>
+                        <Text style={[styles.eveningResponse, {marginTop: 0, fontStyle: 'italic'}]}>{strings.responseFinal} = {eveningResponse}</Text>
                       </>
                     )}
-                    {enigmeDisplay === 'show_response' && (
-                      <Text style={styles.boxText}> La réponse à l'énigme </Text>
-                    )}
-                  </>
-                )
-              ) : (
-                <Text style={styles.boxText}> Pas d'énigme pour le moment </Text>
-              )}
-            </View>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.title_right} onPress={() => navigation.navigate('LoginScreen')}>
-            <Text style={styles.title_right}>
-              <Ionicons name="person-outline" type="font-awesome" color="#000" size={24} />
-              Se connecter
-            </Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.paddingEnigme}>
-          <Text style={styles.title}>Énigme</Text>
-          {enigmeDisplay !== 'display_none' ? (
-            <>
-              <View style={styles.enigmaContainer}>
-                <Text style={styles.enigmaText}>{enigme}</Text>
-              </View>
-              {enigmeDisplay !== 'has_found' && enigmeDisplay !== 'display_none' ? (
-                <>
 
-                {enigmeDisplay !== 'show_response' && (
-                  <View style={styles.answerContainer}>
-                    <TextInput
-                      style={styles.answerInput}
-                      onChangeText={setAnswer}
-                      value={answer}
-                      placeholder="Réponse"
-                      placeholderTextColor="#000"
-                    />
-                    <TouchableOpacity style={styles.hintButton} onPress={checkAnswer}>
-                      <Text style={styles.checkAnswerButton}>
-                        <Ionicons name="send-outline" type="font-awesome" color="#fff" size={15} />
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  )}
-                  {!hintPurchased && enigmeDisplay !== 'show_response' && (
-                    <TouchableOpacity style={styles.hintButton} onPress={purchaseHint}>
-                      <AntDesign name="questioncircle" size={24} color="#fff" />
-                      <Text style={styles.hintButtonText}>Indice ?</Text>
-                    </TouchableOpacity>
-                  )}
-                  <View style={styles.enigmaContainer}>
-                    <Text style={[styles.indiceText, { marginTop: 0, fontStyle: 'italic', display: hintVisible ? 'flex' : 'none' }]}>{getHintElement} {getHint}</Text>
-                  </View>
-                  {showResponse}
-                  <Animated.View style={{ transform: [{ translateX: animatedValue }] }}>
-                    <Text style={[styles.errorMessage, {marginTop: 0, fontStyle: 'italic'}]}>{getMessage} {response}</Text>
-                  </Animated.View>
-                </>
-              ) : (
-                <Text style={styles.responseDisplay}>Réponse: {response}</Text>
-              )}
+                  </>
+                ) : (
+                  <Text style={styles.errorMessage}>{strings.responseFinal} = {response}</Text>
+                )}
+              </>
+            ) : (
+              <Text style={[styles.title_sm, {fontStyle: 'italic'}]}>{msg}</Text>
+            )}
+
+          </View>
+
+          {popupWinnerDisplayed ? (
+
+            <TouchableOpacity style={[styles.priceButtonWin, {textAlign: 'left'}]} onPress={() => Linking.openURL(priceRedirectURL)}>
+              <Text style={[styles.textCenter, styles.priceButton]}>
+                <Text>💪</Text> {/* Emoji de biceps */}
+                <Text style={styles.priceText}> {strings.found_resp} </Text>
+                <Text>💪</Text> {/* Emoji de biceps */}
+              </Text>
+              <Text style={[styles.priceText, {textAlign: 'left'}]}>{textWin} </Text>
+              <Text style={[styles.priceText, {textAlign: 'left'}]}>{textWin2}</Text>
+            </TouchableOpacity>
+          ):(
+            <TouchableOpacity style={[styles.priceButtonWin, {textAlign: 'left'}]} onPress={() => Linking.openURL(priceRedirectURL)}>
+              <Text style={styles.priceButton}>
+              <Ionicons
+                name={'trophy'}
+                size={20}
+                color={'gold'}
+                style={{ width: 35, marginRight: 10 }}
+              />
+              <Text style={styles.priceText}>   {strings.prix}   </Text>
+              <Ionicons
+                    name={'trophy'}
+                    size={20}
+                    color={'gold'}
+                    style={{ width: 35, marginRight: 10 }}
+                  />
+              </Text>
+            </TouchableOpacity>
+
+          )}
+
+          {price !== '' && priceURL !== '' ? (
+            <>
+              <TouchableWithoutFeedback onPress={handleImagePress}>
+                <Image source={{ uri: priceURL }} style={styles.image} />
+              </TouchableWithoutFeedback>
+              <TouchableOpacity onPress={handleImagePress} style={styles.price} >
+                <Text style={styles.price_text_redirect}>{strings.play} {price}</Text>
+              </TouchableOpacity>
             </>
           ) : (
-            <Text style={[styles.title_sm, {fontStyle: 'italic'}]}>{msg}</Text>
+            <Text style={styles.text_bottom}>{strings.noPrice} !</Text>
           )}
 
         </View>
+      </ScrollView>
 
-        <Text style={styles.priceButton}>
-         <AntDesign name="star" size={24} color="gold" />
-         <AntDesign name="star" size={24} color="gold" />
-         <AntDesign name="star" size={24} color="gold" />
-         <Text style={styles.priceText}>   Prix   </Text>
-         <AntDesign name="star" size={24} color="gold" />
-         <AntDesign name="star" size={24} color="gold" />
-         <AntDesign name="star" size={24} color="gold" />
-        </Text>
-
-        {price !== '' && priceURL !== '' ? (
-          <>
-            <Image source={{ uri: priceURL }} style={styles.image} />
-            <Text style={styles.text}>Vous jouez pour une {price}</Text>
-          </>
-        ) : (
-          <Text style={styles.text_bottom}>Aucun prix disponible pour le moment !</Text>
-        )}
-
-      </View>
-    </ScrollView>
+    </KeyboardAvoidingView>
 
   );
 };
@@ -432,6 +566,10 @@ const styles = StyleSheet.create({
     color: '#000',
     alignSelf: 'flex-end',
   },
+  textCenter :{
+    textAlign: 'center',
+    alignSelf: 'center'
+  },
   text_points: {
     fontSize: 17,
     fontWeight: 'bold',
@@ -462,7 +600,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 30,
     alignSelf: 'center',
-    width: '100%',
   },
   enigmaText: {
     fontSize: 17,
@@ -472,7 +609,6 @@ const styles = StyleSheet.create({
     marginRight: 0,
     textAlign: 'justify',
     textAlignVertical: 'center',
-    width: '100%',
   },
   image: {
     height: 300,
@@ -541,7 +677,7 @@ const styles = StyleSheet.create({
   paddingEnigme:{
     padding:10,
     paddingLeft: 0,
-    paddingRight: 0
+    paddingRight: 10
   },
   responseContainer: {
     alignItems: 'center',
@@ -575,9 +711,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%', // add this line
   },
+  price:{
+    width: '90%',
+    marginBottom: 25,
+  },
   priceButton:{
     width: '100%',
-    marginTop: 20,
     backgroundColor: '#46b1c8',
     borderRadius: 5,
     padding: 10,
@@ -585,10 +724,26 @@ const styles = StyleSheet.create({
     paddingRight: 20,
     textAlign: 'center',
   },
+  priceButtonWin:{
+    width: '100%',
+    marginTop: 20,
+    backgroundColor: '#46b1c8',
+    borderRadius: 5,
+    padding: 10,
+    paddingLeft: 20,
+    paddingRight: 20,
+    textAlign: 'left',
+  },
   priceText:{
     fontSize: 17,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  price_text_redirect :{
+    fontSize: 17,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+    color: '#46b1c8'
   },
   errorMessage: {
     fontSize: 17,
@@ -597,6 +752,13 @@ const styles = StyleSheet.create({
     color: '#873e58',
     marginBottom: 0,
     alignSelf: 'center',
+  },
+  eveningResponse: {
+    fontSize: 17,
+    marginTop: 20,
+    fontWeight: 'bold',
+    color: '#873e58',
+    marginBottom: 0,
   },
   text_points_ml:{
     marginLeft: 10

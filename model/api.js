@@ -3,8 +3,36 @@ import axios from 'axios';
 import StorageManager from './storage-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// const webservicesURL = 'https://website.com/api/';
 const webservicesURL = 'https://provisori.com/api/';
+
+// Create a centralized Axios configuration
+const axiosConfig = {
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    'User-Agent': Platform.OS === 'android' ? 'okhttp' : 'ios',
+  },
+};
+
+// Centralized error handling function
+function handleRequestError(error) {
+  console.warn(error);
+  alert("Oops.. Vérifiez votre connexion à Internet et relancez l'application.");
+}
+
+async function postJSON(url, json, showAlert = true) {
+  try {
+    const response = await axios.post(url, json, axiosConfig);
+    const responseJson = response.data;
+    console.log(responseJson);
+    return responseJson;
+  } catch (error) {
+    if (showAlert) {
+      handleRequestError(error);
+    }
+    return postJSON(url, json, false);
+  }
+}
 
 async function register(email, password, name, firstname) {
   const json = JSON.stringify({
@@ -13,112 +41,101 @@ async function register(email, password, name, firstname) {
     name,
     firstname
   });
-  return postJSON(webservicesURL+'/register', json);
+  return postJSON(webservicesURL + '/register', json);
 }
 
 async function login(email, password) {
-  console.log('Logging in with email', email, 'and password', password);
   try {
-    const response = await axios.post(webservicesURL+'login', {
-      email: email,
-      password: password
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    const responseJson = response.data;
-    console.log('s'+responseJson);
-    return responseJson;
+    const response = await axios.post(
+      webservicesURL + 'login',
+      { email, password },
+      axiosConfig
+    );
+    return response.data;
   } catch (error) {
-    console.log('An error occurred while logging in:', error);
+    handleRequestError(error);
     throw error;
   }
 }
 
 async function setHint() {
   const currentDate = new Date();
-  console.log(currentDate)
-  const day = currentDate.getDate().toString().padStart(2, '0'); // get the day as a 2-digit string with leading zeros
-  const month = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // get the month as a 2-digit string with leading zeros
-  const year = currentDate.getFullYear().toString(); // get the year as a 4-digit string
-  const formattedDate = `${day}_${month}_${year}`; // combine the day, month, and year with underscores
+  const day = currentDate.getDate().toString().padStart(2, '0');
+  const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+  const year = currentDate.getFullYear().toString();
+  const formattedDate = `${day}_${month}_${year}`;
   const email = await AsyncStorage.getItem('email');
   const secretCode = await AsyncStorage.getItem('secret');
-  const code = secretCode; // concatenate the secret code with the formatted date
+  const code = secretCode;
 
   const json = JSON.stringify({
     email,
     code
   });
-  console.log('data = ', json)
-  return postJSON(webservicesURL+'hint', json);
+  return postJSON(webservicesURL + 'hint', json);
+}
+
+async function account() {
+  try {
+    const email = await AsyncStorage.getItem('email');
+    const secretCode = await AsyncStorage.getItem('secret');
+    const lang = await AsyncStorage.getItem('lang');
+
+    const response = await axios.post(
+      webservicesURL + 'account',
+      { email, code: secretCode, lang },
+      axiosConfig
+    );
+
+    return response.data;
+  } catch (error) {
+    handleRequestError(error);
+    throw error;
+  }
 }
 
 async function game(email) {
   try {
     const secretCode = await AsyncStorage.getItem('secret');
-    console.log('secret_code : ' +secretCode)
-    console.log('email : ' +email)
+    const lang = await AsyncStorage.getItem('lang');
 
-    const response = await axios.post(webservicesURL+'game', {
-      email: email,
-      code: secretCode
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    const responseJson = response.data;
+    const response = await axios.post(
+      webservicesURL + 'game',
+      { email, code: secretCode, lang },
+      axiosConfig
+    );
 
-    console.log('Response', responseJson);
-
-    return responseJson;
+    return response.data;
   } catch (error) {
-    console.error("Err ",error?.response?.data);
+    handleRequestError(error);
     throw error;
   }
 }
 
-async function postJSON(url, json, showAlert = true) {
-  console.log(url);
-  const useragent = Platform.OS === 'android' ? 'okhttp' : 'ios';
-
+async function params() {
   try {
-    const response = await axios.post(url, json, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'User-Agent': useragent,
-      },
-    });
-    const responseJson = response.data;
-    console.log(responseJson);
-    return responseJson;
+    const response = await axios.get(webservicesURL + 'parameters', axiosConfig);
+    return response.data;
   } catch (error) {
-    console.warn(error);
-    if (showAlert) {
-      alert(
-        "Oups.. Vérifiez que vous êtes bien connecté à internet et relancer l'application"
-      );
-    }
-    return postJSON(url, json, false);
+    handleRequestError(error);
+    throw error;
   }
 }
 
 async function checkResponse(answer, email) {
+  const lang = await AsyncStorage.getItem('lang');
 
-  console.log('emasillll'+ email)
-  const response = await axios.post(webservicesURL+'response', {
-    response: answer,
-    email: email
-  }, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  console.log('data to be sent: ', email)
+
+  const response = await axios.post(
+    webservicesURL + 'response',
+    { response: answer, email, lang },
+    axiosConfig
+  );
+
   const responseJson = response.data;
-  console.log('response'+responseJson.status);
+  console.log('response ' + responseJson.status);
+  console.log('response ' + responseJson.error);
   return responseJson;
 }
 
@@ -138,4 +155,6 @@ export default {
   game,
   checkResponse,
   setHint,
+  params,
+  account,
 };

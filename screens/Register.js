@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+
+// Import translations
+import strings_de from '../utils/strings-de';
+import strings_fr from '../utils/strings-fr';
 
 export default function Register({ navigation }) {
   const [name, setName] = useState('');
@@ -12,6 +17,7 @@ export default function Register({ navigation }) {
   const [errorText, setErrorText] = useState('');
   const isFocused = useIsFocused();
   const [buttonOpacity, setButtonOpacity] = useState(0);
+  const [strings, setStrings] = useState(false);
 
   const handleRegistration = async () => {
     // Vérifier que tous les champs sont remplis
@@ -46,7 +52,37 @@ export default function Register({ navigation }) {
       {
         await AsyncStorage.setItem('email', email);
         await AsyncStorage.setItem('name', `${name}`);
-        navigation.navigate('HomeScreen');
+
+        let email_check = await AsyncStorage.getItem('email');
+        console.log('emaiiiiiiiiiiiil', email_check)
+
+         // Set a timeout before navigating
+         setTimeout(() => {
+
+          // if email is empty -> retry all operation in 1 second
+          if (email_check ==  null){
+
+            // retry
+            AsyncStorage.setItem('email', email);
+            
+            setTimeout(() => {
+
+              navigation.navigate('HomeScreen');
+             
+            }, 1000); // 1000 milliseconds delay
+    
+            
+          }else{
+
+            navigation.navigate('HomeScreen');
+
+          }
+
+        }, 1000); // 1000 milliseconds delay
+
+        // if email has not been set retry in 1 second
+        
+
       }else {
         setErrorText(data.error)
       }
@@ -56,7 +92,25 @@ export default function Register({ navigation }) {
     }
   };
 
+  const checkLang = async () => {
+    try {
+      let lang = await AsyncStorage.getItem('lang');
+      let selectedStrings = lang === 'de' ? strings_de : strings_fr;
+      if (!selectedStrings) {
+        await AsyncStorage.setItem('lang', 'fr');
+        selectedStrings = strings_de;
+      }
+      setStrings(selectedStrings);
+    } catch (error) {
+      console.log(error); // Log the error for debugging purposes
+    }
+
+  };
+
   useEffect(() => {
+
+    checkLang();
+
     const checkLogin = async () => {
       try {
         const value = await AsyncStorage.getItem('email');
@@ -79,23 +133,28 @@ export default function Register({ navigation }) {
   }, []);
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+    
       <View style={styles.container}>
-        <Text style={styles.title}>S'enregistrer</Text>
+        <Text style={styles.title}>{strings.register}</Text>
         <TextInput
           style={styles.input}
-          placeholder="Prénom"
+          placeholder={strings.firstname}
           value={name}
           onChangeText={setName}
         />
         <TextInput
           style={styles.input}
-          placeholder="Nom de famille"
+          placeholder={strings.name}
           value={last_name}
           onChangeText={setLast_name}
         />
         <TextInput
           style={styles.input}
-          placeholder="Nom d'utilisateur"
+          placeholder={strings.username}
           value={username}
           onChangeText={setUsername}
         />
@@ -108,7 +167,7 @@ export default function Register({ navigation }) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe"
+          placeholder={strings.password}
           value={password}
           onChangeText={setPassword}
           secureTextEntry={true}
@@ -117,13 +176,14 @@ export default function Register({ navigation }) {
           <Text style={styles.errorText}>* {errorText}</Text>
         }
         <TouchableOpacity style={[styles.button, { opacity: buttonOpacity }]} onPress={handleRegistration}>
-          <Text style={styles.buttonText}>S'enregistrer</Text>
+          <Text style={styles.buttonText}>{strings.register}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
-          <Text style={styles.link}>Déjà un compte ? Se connecter</Text>
+          <Text style={styles.link}>{strings.register_link_login_text}</Text>
         </TouchableOpacity>
 
       </View>
+    </KeyboardAvoidingView>
     );
   }
   const styles = StyleSheet.create({
