@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "324853840846",
+    "firebase_url": "https://provisori-d63ec.firebaseio.com",
+    "project_id": "provisori-d63ec",
+    "storage_bucket": "provisori-d63ec.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:324853840846:android:d131f9bb4ee69d5b",
+        "android_client_info": {
+          "package_name": "com.gamequestion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "324853840846-47bsamslssvt1t4vbog00t9nrabviiu3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gamequestion",
+            "certificate_hash": "38a50631e84767567deb1afa7c4bb0edb8f8069e"
+          }
+        },
+        {
+          "client_id": "324853840846-dvvksc8ekophsmns8dbmbk1jar40doro.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gamequestion",
+            "certificate_hash": "92fb278b34f8e3a35a61ee8ffb7cb6aa3fbd8384"
+          }
+        },
+        {
+          "client_id": "324853840846-2rjcn3fdr77esdcbm64k3s98nv6mjedf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApq15kvYg1PKGhOHeyyPDM0YdwBO4nS1g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "324853840846-2rjcn3fdr77esdcbm64k3s98nv6mjedf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "324853840846-39tpkpiqqa8oof2md4l83gda08qeu1qt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "ch.qualia3.provisori"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
