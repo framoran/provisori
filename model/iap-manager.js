@@ -5,6 +5,8 @@ import {finishTransaction, flushFailedPurchasesCachedAsPendingAndroid, consumePu
 // Import api.js from the model folder
 import api from '../model/api';
 
+var isPurchasing = false;
+
 
 // Set the product IDs for your in-app purchases
 const items = Platform.select({
@@ -41,7 +43,6 @@ async function getProducts() {
       
         const products = await InAppPurchases.getProducts({skus:['ch.provisori.indice', "com.gamequestion.ios.indice"]});
 
-        console.log(products);
         return products
       } catch (error) {
         console.log('Failed to get products', error);
@@ -51,20 +52,28 @@ async function getProducts() {
 }
 
 async function buyProduct() {
+  //to prevent issues with double clicking
+  if(isPurchasing) return;
+
+  isPurchasing = true;
   await connectAsync();
   const products = await getProducts();
-  console.log("products  ",products);
-  //const isConsumable = true; // or false, depending on your use case
-  // Assuming you have a string representing the developer payload for Android
-  //const developerPayloadAndroid = "Achat d'indice Provisori";
+
+
+
   try {
     const productId = Platform.OS === 'ios' ? "com.gamequestion.ios.indice" : "ch.provisori.indice";
     const purchase = await InAppPurchases.requestPurchase({sku: productId});
-    //  const finishTransaction = await finishTransaction({purchase, isConsumable, developerPayloadAndroid});
+
+
+    //consume products immediatly after purchase
+    await consumeProducts();
+
     console.log("OKOK", purchase);
-    // { productId: 'product_id_1', transactionId: 'transaction_id_1', purchaseToken: 'purchase_token_1' }
     await api.setHint();
+    isPurchasing = false;
   } catch (error) {
+    isPurchasing = false;
     console.log('Failed to purchase product', error);
   }
 
@@ -77,22 +86,23 @@ async function consumeProducts() {
   await connectAsync();
   try {
      const purchases = await getAvailablePurchases();
-     flushFailedPurchasesCachedAsPendingAndroid();
-     const isConsumable = true; // or false, depending on your use case
-     // Assuming you have a string representing the developer payload for Android
+
+
      const developerPayloadAndroid = "Achat d'indice Provisori";
-     await Promise.all(purchases.map(async purchase => {
-
+     purchases.forEach(async purchase => {
+      const isConsumable = true;
+      if(purchase.productId == "com.gamequestion.ios.indice" || purchase.purchaseId == "ch.provisori.indice"){
         await finishTransaction({purchase, isConsumable, developerPayloadAndroid});
+        await consumePurchase(purchase.purchaseToken);
+      }
+      
+    });
 
-       }
-
-     ))
-
-     /*Alert.alert(
-      'Achat réussit',
-      `Vous avez acheté un indice !`,
-    );*/
+     //throws error on ios, so run for android only
+     if(Platform.OS === 'android'){
+      flushFailedPurchasesCachedAsPendingAndroid();
+     }
+     
 
   } catch (error) {
     console.warn(error);

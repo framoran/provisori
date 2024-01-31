@@ -306,7 +306,6 @@ const EnigmaView = ({navigation}) => {
   const purchaseHint = async () => {
     console.log('init')
     await iapManager.buyProduct();
-    await iapManager.consumeProducts();
 
     setRefresh(refresh => !refresh); // toggle the refresh state to trigger a re-render
 
