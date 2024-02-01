@@ -66,8 +66,8 @@ async function buyProduct() {
     const purchase = await InAppPurchases.requestPurchase({sku: productId});
 
 
-    //consume products immediatly after purchase
-    await consumeProducts();
+    //consume products immediatly after purchase no need to await this
+    consumeProducts();
 
     console.log("OKOK", purchase);
     await api.setHint();
