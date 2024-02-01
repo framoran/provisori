@@ -93,18 +93,18 @@ const EnigmaView = ({navigation}) => {
         if (gameData.popup_winner) {
           const winnerPriceLink = `${gameData.winnerPriceUrl}`;
           Alert.alert(
-            `${strings.winner} \n`,
+            `Le gagant a été tiré au sort !`,
             `${gameData.winner_username} remporte `,
-            [
-              {
-                text: 'OK',
-              },
+            [              
               {
                 text: gameData.winner_price,
                 onPress: () => Linking.openURL(gameData.winner_price_url),
               },
-
+              {
+                text: 'OK',
+              },
             ],
+
             {
               cancelable: false,
               style: 'large',
@@ -114,7 +114,9 @@ const EnigmaView = ({navigation}) => {
               buttonStyle: { height: 60, justifyContent: 'center' },
               buttonTextStyle: { fontSize: 19 },
             }
+
           );
+
         }
 
         if (gameData.question) {
